@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <webots/accelerometer.h>
 #include <webots/camera.h>
 #include <webots/distance_sensor.h>
@@ -34,6 +35,8 @@
 #include <webots/robot.h>
 #include <webots/touch_sensor.h>
 #include <webots/utils/motion.h>
+
+#include "rest_c/rest_tcp_server.h"
 
 #ifdef _MSC_VER
 #define snprintf sprintf_s
@@ -171,25 +174,13 @@ static double clamp(double value, double min, double max) {
 
 // the accelerometer axes are oriented as on the real robot
 // however the sign of the returned values may be opposite
-static void print_acceleration() {
+static void get_data() {
   const double *acc = wb_accelerometer_get_values(accelerometer);
-  printf("----------accelerometer----------\n");
-  printf("acceleration: [ x y z ] = [%f %f %f]\n", acc[0], acc[1], acc[2]);
-}
-
-// the gyro axes are oriented as on the real robot
-// however the sign of the returned values may be opposite
-static void print_gyro() {
   const double *vel = wb_gyro_get_values(gyro);
-  printf("----------gyro----------\n");
-  printf("angular velocity: [ x y ] = [%f %f]\n", vel[0], vel[1]);
-}
-
-
-// the InertialUnit roll/pitch angles are equal to naoqi's AngleX/AngleY
-static void print_inertial_unit() {
   const double *rpy = wb_inertial_unit_get_roll_pitch_yaw(inertial_unit);
-  printf("----------inertial unit----------\n");
+
+  printf("acceleration: [ x y z ] = [%f %f %f]\n", acc[0], acc[1], acc[2]);
+  printf("angular velocity: [ x y ] = [%f %f]\n", vel[0], vel[1]);
   printf("roll/pitch/yaw: = [%f %f %f]\n", rpy[0], rpy[1], rpy[2]);
 }
 
@@ -281,6 +272,7 @@ static void print_camera_image(WbDeviceTag camera) {
   free(line);
 }
 
+// ====================================================== //
 static void set_all_leds_color(int rgb) {
   // these leds take RGB values
   int i;
@@ -310,32 +302,8 @@ static void set_hands_angle(double angle) {
   }
 }
 
-static void print_help() {
-  printf("----------nao_demo----------\n");
-  printf("Select the robot and use the keyboard to control it:\n");
-  printf("(The 3D window need to be focused)\n");
-  printf("[Up][Down]: move a few steps forward/backwards\n");
-  printf("[<-][->]: make a few side steps left/right\n");
-  printf("[Shift] + [<-][->]: turn left/right\n");
-  printf("[U]: print ultrasound sensors\n");
-  printf("[A]: print accelerometer\n");
-  printf("[G]: print gyro\n");
-  printf("[I]: print inertial unit (roll/pitch/yaw)\n");
-  printf("[F]: print foot sensors\n");
-  printf("[B]: print foot bumpers\n");
-  printf("[Home][End]: print scaled top/bottom camera image\n");
-  printf("[PageUp][PageDown]: open/close hands\n");
-  printf("[7][8][9]: change all leds RGB color\n");
-  printf("[0]: turn all leds off\n");
-  printf("[T]: perform a tai chi move\n");
-  printf("[W]: wipe its forehead\n");
-  printf("[H]: print this help message\n");
-}
 
 static void terminate() {
-  // add you cleanup code here: write results, close files, free memory, etc.
-  // ...
-
   wb_robot_cleanup();
 }
 
@@ -344,82 +312,90 @@ static void simulation_step() {
     terminate();
 }
 
-static void run_command(int key) {
-  switch (key) {
-    case WB_KEYBOARD_LEFT:
-      start_motion(side_step_left);
-      break;
-    case WB_KEYBOARD_RIGHT:
-      start_motion(side_step_right);
-      break;
-    case WB_KEYBOARD_UP:
-      start_motion(forwards);
-      break;
-    case WB_KEYBOARD_DOWN:
-      start_motion(backwards);
-      break;
-    case WB_KEYBOARD_LEFT | WB_KEYBOARD_SHIFT:
-      start_motion(turn_left_60);
-      break;
-    case WB_KEYBOARD_RIGHT | WB_KEYBOARD_SHIFT:
-      start_motion(turn_right_60);
-      break;
-    case 'A':
-      print_acceleration();
-      break;
-    case 'G':
-      print_gyro();
-      break;
-    case 'I':
-      print_inertial_unit();
-      break;
-    case 'F':
-      print_foot_sensors();
-      break;
-    case 'B':
-      print_foot_bumpers();
-      break;
-    case 'U':
-      print_ultrasound_sensors();
-      break;
-    case 'T':
-      start_motion(tai_chi);
-      break;
-    case 'W':
-      start_motion(wipe_forehead);
-      break;
-    case WB_KEYBOARD_HOME:
-      print_camera_image(CameraTop);
-      break;
-    case WB_KEYBOARD_END:
-      print_camera_image(CameraBottom);
-      break;
-    case WB_KEYBOARD_PAGEUP:
-      set_hands_angle(0.96);
-      break;
-    case WB_KEYBOARD_PAGEDOWN:
-      set_hands_angle(0.0);
-      break;
-    case '7':
+enum led_color {
+  OFF = 0,
+  RED,
+  GREEN,
+  BLUE
+};
+
+void change_color(enum led_color color) {
+  switch (color) {
+    case RED:
       set_all_leds_color(0xff0000);  // red
       break;
-    case '8':
+    case GREEN:
       set_all_leds_color(0x00ff00);  // green
       break;
-    case '9':
+    case BLUE:
       set_all_leds_color(0x0000ff);  // blue
       break;
-    case '0':
+    case OFF:
       set_all_leds_color(0x000000);  // off
       break;
-    case 'H':
-      print_help();
-      break;
+  }
+}
+
+// data pipe
+typedef struct receive_data {
+  int face_emotion; // 顔の表情 (0: OFF, 1: RED (angry), 2: GREEN (happy), 3: BLUE (sad))
+  bool hand_wave_enable; // 手を振る
+  bool tai_chi_enable; // 体操
+  bool wipe_enable; // 汗を拭く
+  float hands_angle; // 手の角度 set_hands_angle(0.96);
+} receive_data;
+
+void action_from_rest_C()
+{
+  receive_data input_data;
+  if (global_parse_data.method == PUT || global_parse_data.method == POST) {
+    // if global_parse_data.target == "/face_emotion"
+    if (strcmp(global_parse_data.target, "/face_emotion") == 0) {
+      // if global_parse_data.data == "0"
+      if (strcmp(global_parse_data.data, "0") == 0) {
+        change_color(OFF);
+      } else if (strcmp(global_parse_data.data, "1") == 0) {
+        change_color(RED);
+      } else if (strcmp(global_parse_data.data, "2") == 0) {
+        change_color(GREEN);
+      } else if (strcmp(global_parse_data.data, "3") == 0) {
+        change_color(BLUE);
+      }
+    } else if (strcmp(global_parse_data.target, "/hand_wave_enable") == 0) {
+      if (strcmp(global_parse_data.data, "0") == 0) {
+        input_data.hand_wave_enable = false;
+      } else if (strcmp(global_parse_data.data, "1") == 0) {
+        input_data.hand_wave_enable = true;
+      }
+    } else if (strcmp(global_parse_data.target, "/tai_chi_enable") == 0) {
+      if (strcmp(global_parse_data.data, "0") == 0) {
+        input_data.tai_chi_enable = false;
+      } else if (strcmp(global_parse_data.data, "1") == 0) {
+        input_data.tai_chi_enable = true;
+      }
+    } else if (strcmp(global_parse_data.target, "/wipe_enable") == 0) {
+      if (strcmp(global_parse_data.data, "0") == 0) {
+        input_data.wipe_enable = false;
+      } else if (strcmp(global_parse_data.data, "1") == 0) {
+        input_data.wipe_enable = true;
+      }
+    } else if (strcmp(global_parse_data.target, "/hands_angle") == 0) {
+        input_data.hands_angle = atof(global_parse_data.data);
+    }
+
+    // reset global_parse_data
+    global_parse_data.method = 0;
+    strcpy(global_parse_data.target, "");
+    strcpy(global_parse_data.data, "");
   }
 }
 
 // main function
 int main() {
+  // create rest_c
+  restful_server_socket rest_server;
+  create_restful_server_socket(&rest_server, 5000);
+
   // call this before any other call to a Webots function
   wb_robot_init();
 
@@ -430,31 +406,16 @@ int main() {
   find_and_enable_devices();
   load_motion_files();
 
-  // print instructions
-  print_help();
-
-  // walk forwards
-  wbu_motion_set_loop(hand_wave, true);
-  wbu_motion_play(hand_wave);
-  currently_playing = hand_wave;
-
-  // until a key is pressed
-  int key = -1;
-  do {
-    simulation_step();
-    key = wb_keyboard_get_key();
-  } while (key <= 0);
-
-  // stop looping this motion
-  wbu_motion_set_loop(hand_wave, false);
-
-  // read keyboard and execute user commands
   while (1) {
-    if (key > 0)
-      run_command(key);
+    action_from_rest_C();
+    printf("method: %d, target: %s, data: %s\n",
+    global_parse_data.method,
+    global_parse_data.target,
+    global_parse_data.data);
+    sleep(1);
 
     simulation_step();
-    key = wb_keyboard_get_key();
+    // key = wb_keyboard_get_key();
   }
 
   return 0;
