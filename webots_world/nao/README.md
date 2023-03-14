@@ -1,5 +1,11 @@
 # nao-demo
 
+```bash
+./start_sim.bash
+```
+
+<br>
+
 ### Face
 
 ```bash
