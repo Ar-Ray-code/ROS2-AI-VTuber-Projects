@@ -336,51 +336,32 @@ void change_color(enum led_color color) {
   }
 }
 
-// data pipe
-typedef struct receive_data {
-  int face_emotion; // 顔の表情 (0: OFF, 1: RED (angry), 2: GREEN (happy), 3: BLUE (sad))
-  bool hand_wave_enable; // 手を振る
-  bool tai_chi_enable; // 体操
-  bool wipe_enable; // 汗を拭く
-  float hands_angle; // 手の角度 set_hands_angle(0.96);
-} receive_data;
-
 void action_from_rest_C()
 {
-  receive_data input_data;
   if (global_parse_data.method == PUT || global_parse_data.method == POST) {
     // if global_parse_data.target == "/face_emotion"
     if (strcmp(global_parse_data.target, "/face_emotion") == 0) {
       // if global_parse_data.data == "0"
       if (strcmp(global_parse_data.data, "0") == 0) {
         change_color(OFF);
-      } else if (strcmp(global_parse_data.data, "1") == 0) {
+      } else if (strcmp(global_parse_data.data, "1") == 0 || strcmp(global_parse_data.data, "RED") == 0) {
         change_color(RED);
-      } else if (strcmp(global_parse_data.data, "2") == 0) {
+      } else if (strcmp(global_parse_data.data, "2") == 0 || strcmp(global_parse_data.data, "GREEN") == 0) {
         change_color(GREEN);
-      } else if (strcmp(global_parse_data.data, "3") == 0) {
+      } else if (strcmp(global_parse_data.data, "3") == 0 || strcmp(global_parse_data.data, "BLUE") == 0) {
         change_color(BLUE);
       }
     } else if (strcmp(global_parse_data.target, "/hand_wave_enable") == 0) {
-      if (strcmp(global_parse_data.data, "0") == 0) {
-        input_data.hand_wave_enable = false;
-      } else if (strcmp(global_parse_data.data, "1") == 0) {
-        input_data.hand_wave_enable = true;
-      }
+      // any value
+      start_motion(hand_wave);
     } else if (strcmp(global_parse_data.target, "/tai_chi_enable") == 0) {
-      if (strcmp(global_parse_data.data, "0") == 0) {
-        input_data.tai_chi_enable = false;
-      } else if (strcmp(global_parse_data.data, "1") == 0) {
-        input_data.tai_chi_enable = true;
-      }
+      // any value
+      start_motion(tai_chi);
     } else if (strcmp(global_parse_data.target, "/wipe_enable") == 0) {
-      if (strcmp(global_parse_data.data, "0") == 0) {
-        input_data.wipe_enable = false;
-      } else if (strcmp(global_parse_data.data, "1") == 0) {
-        input_data.wipe_enable = true;
-      }
+      // any value
+      start_motion(wipe_forehead);
     } else if (strcmp(global_parse_data.target, "/hands_angle") == 0) {
-        input_data.hands_angle = atof(global_parse_data.data);
+      set_hands_angle(atof(global_parse_data.data));
     }
 
     // reset global_parse_data
@@ -408,14 +389,14 @@ int main() {
 
   while (1) {
     action_from_rest_C();
-    printf("method: %d, target: %s, data: %s\n",
-    global_parse_data.method,
-    global_parse_data.target,
-    global_parse_data.data);
-    sleep(1);
+    // printf("method: %d, target: %s, data: %s\n",
+    // global_parse_data.method,
+    // global_parse_data.target,
+    // global_parse_data.data);
+    usleep(10000);
+
 
     simulation_step();
-    // key = wb_keyboard_get_key();
   }
 
   return 0;
