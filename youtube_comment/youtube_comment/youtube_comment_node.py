@@ -8,7 +8,6 @@ import rclpy
 from rclpy.node import Node
 
 
-
 class COMMENT:
     def __init__(self, author, message, chat_time=None):
         self.author = author
