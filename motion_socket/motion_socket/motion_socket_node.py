@@ -3,22 +3,22 @@ from std_msgs.msg import String
 import rclpy
 from rclpy.node import Node
 
-# topic get -----------------------------------
+# topic -----------------------------------
 # - std_msgs/String
-# (format): "<data>`face`,`motion`</data>"
+# (format): "<motion>`face`,`motion`</motion>"
 # - face : NONE, ANGRY, HAPPY, SAD
 # - motion : NONE, HAND_WAVE(hello!), TAI_CHI (Pose), WIPE(hmm...)
 
 # example -----------------------------------
 #
-# <data>NONE,HAND_WAVE</data>
-# <data>NONE,NONE</data>
-# <data>ANGRY,NONE</data>
-# <data>HAPPY,HAND_WAVE</data>
-# <data>SAD,WIPE</data>
-# <data>NONE,WIPE</data>
+# <motion>NONE,HAND_WAVE</motion>
+# <motion>NONE,NONE</motion>
+# <motion>ANGRY,NONE</motion>
+# <motion>HAPPY,HAND_WAVE</motion>
+# <motion>SAD,WIPE</motion>
+# <motion>NONE,WIPE</motion>
 #
-# $ ros2 topic pub --once /motion_socket std_msgs/msg/String "{data : '<data>NONE,HAND_WAVE</data>'}"
+# $ ros2 topic pub --once /motion_socket std_msgs/msg/String "{data : '<motion>NONE,HAND_WAVE</motion>'}"
 
 
 class MotionSocket(Node):
@@ -33,8 +33,8 @@ class MotionSocket(Node):
 
 
     def listener_callback(self, msg):
-        # remove <data> and </data> and split by ','
-        data = msg.data.replace('<data>', '').replace('</data>', '').split(',')
+        # remove <motion> and </motion> and split by ','
+        data = msg.data.replace('<motion>', '').replace('</motion>', '').split(',')
         face = data[0]
         motion = data[1]
 
