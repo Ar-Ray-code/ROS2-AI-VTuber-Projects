@@ -47,14 +47,12 @@ def generate_launch_description():
     )
 
     print("============== nodes ================")
-
     speak_ros = Node(package='speak_ros', executable='speak_ros_node', parameters=[{'plugin_name': 'voicevox_plugin::VoiceVoxPlugin'}])
     motion_socket = Node(package='motion_socket', executable='motion_socket_node')
     chatgpt_socket = Node(package='chatgpt_socket', executable='chatgpt_socket_node',
         parameters=[{'ros_installed_setup_bash': os.path.expanduser(workspace) + '/install/setup.bash'},
                     {'text_path': os.path.expanduser(workspace) + '/src/ROS2-AI-VTuber-Projects/chatgpt_socket/config/prompt.txt'}])
     youtube_comment = Node(package='youtube_comment', executable='youtube_comment_node', parameters=[{'video_id': video_id}])
-
     print("============== timer ================")
     delay_node = TimerAction(period=10.0, actions=[speak_ros, motion_socket, chatgpt_socket, youtube_comment])
 

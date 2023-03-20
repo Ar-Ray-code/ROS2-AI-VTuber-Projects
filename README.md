@@ -21,6 +21,18 @@ rosdep install -i --from-path src --rosdistro foxy -y
 colcon build --symlink-install
 ```
 
+### OBS install
+
+[obsproject.com](https://obsproject.com/wiki/install-instructions#linux)
+
+```bash
+sudo apt install -y v4l2loopback-dkms
+
+sudo add-apt-repository ppa:obsproject/obs-studio # enter `Enter` key to continue
+sudo apt update
+sudo apt install -y obs-studio
+```
+
 <br>
 
 ## 実行方法
