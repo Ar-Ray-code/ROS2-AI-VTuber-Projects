@@ -29,14 +29,12 @@ class MotionSocket(Node):
             String,
             'motion_socket',
             self.listener_callback,
-            10)
+            1)
 
 
     def listener_callback(self, msg):
-        # remove <motion> and </motion> and split by ','
-        data = msg.data.replace('<motion>', '').replace('</motion>', '').split(',')
-        face = data[0]
-        motion = data[1]
+        face, motion = msg.data.replace('<motion>', '').replace('</motion>', '').split(',')
+        print(face, motion)
 
         self.send_using_socket(face, motion)
 
