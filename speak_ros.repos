@@ -1,0 +1,10 @@
+repositories:
+  speak_ros_voicevox_plugin:
+    type: git
+    url: https://github.com/HansRobo/speak_ros_voicevox_plugin.git
+    version: main
+  speak_ros:
+    type: git
+    url: https://github.com/HansRobo/speak_ros
+    version: main
+
