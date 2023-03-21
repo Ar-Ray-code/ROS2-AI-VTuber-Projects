@@ -19,7 +19,7 @@ git clone https://github.com/Ar-Ray-code/ROS2-AI-VTuber-Projects.git -b main
 vcs import . < ROS2-AI-VTuber-Projects/speak_ros.repos
 
 cd ~/ws_aivtuber
-rosdep install -i --from-path src --rosdistro foxy -y
+rosdep install -i --from-path src --rosdistro humble -y
 colcon build --symlink-install
 ```
 
