@@ -2,6 +2,8 @@
 
 ROS2系AI VTuberのプロジェクトです。
 
+![image](https://user-images.githubusercontent.com/67567093/226523573-3e97ead6-b7da-46f9-bdf4-128b2c350bc5.png)
+
 <br>
 
 ## Webots Install
