@@ -39,9 +39,11 @@ class ChatGPTSocket(Node):
         # params
         self.declare_parameter('ros_installed_setup_bash', '~/ws_aivtuber/install/setup.bash')
         self.declare_parameter('text_path', '~/ws_aivtuber/src/ROS2-AI-VTuber-Projects/chatgpt_socket/config/prompt.txt')
+        self.declare_parameter('speak_enable', False)
 
         self.ros_installed_setup_bash = self.get_parameter('ros_installed_setup_bash').value
         self.text_path = self.get_parameter('text_path').value
+        self.speak_enable = self.get_parameter('speak_enable').value
 
         self.speak_ros  = SpeakROS(os.path.expanduser(self.ros_installed_setup_bash))
         self.chatgpt    = ChatGPT(os.environ['OPENAI_API_KEY'])
@@ -56,6 +58,7 @@ class ChatGPTSocket(Node):
             1)
 
         self.motion_socket_pub_ = self.create_publisher(String, 'motion_socket', 1)
+        self.speak = self.create_publisher(String, 'speak', 1)
 
     def listener_callback(self, msg: Chat):
         author = msg.author
@@ -68,7 +71,10 @@ class ChatGPTSocket(Node):
         self.get_logger().info("=============================")
         self.get_logger().info("chat: " + chat)
         self.get_logger().info("result: " + result)
-        self.get_logger().info("motion: " + result.split('<motion>')[1].split('</motion>')[0])
+        try:
+            self.get_logger().info("motion: " + result.split('<motion>')[1].split('</motion>')[0])
+        except:
+            return
         self.get_logger().info("=============================")
 
         # <motion>, <comment>
@@ -76,9 +82,10 @@ class ChatGPTSocket(Node):
         comment = result.split('<comment>')[1].split('</comment>')[0]
 
         self.motion_socket_pub_.publish(String(data=motion))
-        # rclpy.spin_once(self, timeout_sec=0.1)
-        self.speak_ros.speak(comment)
-        # rclpy.spin_once(self, timeout_sec=0.1)
+        self.speak.publish(String(data=comment))
+
+        if self.speak_enable:
+            self.speak_ros.speak(comment)
 
 def main(args=None):
     rclpy.init(args=args)

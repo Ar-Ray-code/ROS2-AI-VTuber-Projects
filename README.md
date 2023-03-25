@@ -2,8 +2,6 @@
 
 ROS2系AI VTuberのプロジェクトです。
 
-![image](https://user-images.githubusercontent.com/67567093/226523573-3e97ead6-b7da-46f9-bdf4-128b2c350bc5.png)
-
 <br>
 
 ## Webots Install
@@ -19,7 +17,7 @@ git clone https://github.com/Ar-Ray-code/ROS2-AI-VTuber-Projects.git -b main
 vcs import . < ROS2-AI-VTuber-Projects/speak_ros.repos
 
 cd ~/ws_aivtuber
-rosdep install -i --from-path src --rosdistro humble -y
+rosdep install -i --from-path src --rosdistro foxy -y
 colcon build --symlink-install
 ```
 

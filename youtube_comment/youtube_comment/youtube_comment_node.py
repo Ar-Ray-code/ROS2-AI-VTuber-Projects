@@ -14,6 +14,10 @@ class COMMENT:
         self.message = message
         self.header = Header()
 
+        # if none
+        if chat_time is None:
+            chat_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         date_time_obj = datetime.datetime.strptime(chat_time, '%Y-%m-%d %H:%M:%S')
         unix_timestamp = date_time_obj.timestamp()
 
@@ -46,16 +50,19 @@ class ChatPublisher(Node):
         self.MAX_BUFFER_SIZE = 100
         self.comment_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
 
-        self.publisher_ = self.create_publisher(Chat, 'chat', 10)
+        self.publisher_ = self.create_publisher(Chat, 'chat', 1)
         self.timer = self.create_timer(1.0, self.publish_chat)
 
     def publish_chat(self):
         comment = get_comment(self.livechat, self.MAX_BUFFER_SIZE)
-        self.publisher_.publish(
-            Chat(author=comment.author,
-                 message=comment.message,
-                 video_id=self.video_id,
-                 header=comment.header))
+        # replace " " with "" to avoid empty message
+        comment.message = comment.message.replace(" ", "").replace("　", "")
+        if comment.message != "":
+            self.publisher_.publish(
+                Chat(author=comment.author,
+                    message=comment.message,
+                    video_id=self.video_id,
+                    header=comment.header))
 
 
 def main(args=None):
